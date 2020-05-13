@@ -9,7 +9,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --experimental-modules test/user.test.js"
+    "test": "node --experimental-modules test/test.js"
   },
   "dependencies": {
     "axios": "^0.19.2"
