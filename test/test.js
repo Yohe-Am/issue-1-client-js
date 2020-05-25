@@ -1,31 +1,9 @@
-'use strict';
-
-import assert from 'assert';
-
-function testAsyncFn(fn) {
-    fn()
-        .then(
-            () => console.log("tests passed")
-        ).catch(
-            (err) => {
-                console.log(`tests failed: --- --- ---`);
-                console.log(err);
-            }
-        );
-}
-
-async function testFruitfulAsyncFn(fn, ...args) {
-    try {
-        var result = await fn.apply(null, args);
-        console.log(`test passed: +++ +++ +++ `);
-        console.log(result);
-    }
-    catch (err) {
-        console.log(`tests failed: --- --- ---`);
-        console.log(err);
-        throw new Error(`Fruitful fn failed: ${fn.name}`);
-    }
-}
+import { getAuthToken } from '../lib/auth.js';
+import { addUser, getUser } from '../lib/user.js';
+import { getPost } from "../lib/post.js";
+import { getFeedPosts, subscribeToChannel } from "../lib/feed.js";
+// import 'chai/register-should';
+import 'chai/register-expect';
 
 const baseURL = "http://localhost:8080";
 
@@ -37,10 +15,47 @@ const testUser = {
     password: 'password'
 };
 
-import { addUser, getUser, NewUserServiceClient } from '../lib/user.js';
-import { getAuthToken } from '../lib/auth.js';
+describe('authService', () => {
+    'use strict';
 
-async function testUserServiceClientModule() {
+    test('getsAuthToken - success', async () => {
+        let authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+        expect(authToken).to.be.a('string');
+    });
+
+    test('getsAuthToken - wrong password', async () => {
+        try {
+            await getAuthToken(baseURL, testUser.username, 'wrong-password');
+        } catch (error) {
+            expect(error).to.have.property('data')
+                .that.has.property('errorReason')
+                .that.equals('credentials');
+        }
+    });
+    /* 
+        test('getsAuthToken - non-existent username', () => {
+            expect(myBeverage.delicious).toBeTruthy();
+        });
+    
+        test('getsAuthToken - missing password', () => {
+            expect(myBeverage.delicious).toBeTruthy();
+        });
+    
+        test('getsAuthToken - missing username', () => {
+            expect(myBeverage.delicious).toBeTruthy();
+        }); */
+
+});
+
+describe('userService', () => {
+    'use strict';
+
+    test('getsUser - success', async () => {
+        let user = await getUser(baseURL, testUser.username);
+        expect(user).to.have.property('username', testUser.username);
+        expect(user).to.have.property('firstName', testUser.firstName);
+        expect(user).to.have.property('lastName', testUser.lastName);
+    });
     /*  
     {  // add user
          await testAsyncFn(addUser, baseURL, testUser);
@@ -53,23 +68,55 @@ async function testUserServiceClientModule() {
          
 
      */
-     { // getUser - authorized
+    /* { // getUser - authorized
         let token = await getAuthToken(baseURL, testUser.username, testUser.password);
         console.log("got token");
         await testFruitfulAsyncFn(getUser, baseURL, testUser.username, token);
-    }
-}
+    } */
 
-async function testAuthServiceClientModule() {
-    { // getAuthToken
-        await testFruitfulAsyncFn(getAuthToken, baseURL, testUser.username, testUser.password);
-    }
-}
+});
 
 
-testAsyncFn(testUserServiceClientModule);
-// testAsyncFn(testAuthServiceClientModule);
+describe('postService', () => {
+    'use strict';
 
+    test('getPost - success', async () => {
+        let post = await getPost(baseURL, 5);
+        console.log(post);
+    });
+});
+
+
+describe('feedService', () => {
+    'use strict';
+
+    let authToken;
+    beforeAll(async () => {
+        authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+    });
+
+    test.only('getFeedPosts - success', async () => {
+        let posts = await getFeedPosts(
+            baseURL,
+            testUser.username,
+            authToken,
+            {
+                onlyIds: true,
+            }
+        );
+        console.log(posts);
+    });
+
+    test('subscribeToChannel - success', async () => {
+        let result = await subscribeToChannel(
+            baseURL,
+            testUser.username,
+            'chromagnum',
+            authToken,
+        );
+        console.log(result);
+    });
+});
 
 /* User struct {
     Username     string    `json:"username"`
@@ -83,4 +130,20 @@ testAsyncFn(testUserServiceClientModule);
     Password   string `json:"password,omitempty"`
     PictureURL string `json:"pictureURL"`
 }
+ */
+
+/*
+// Post is an aggregate entity of Releases along with socially interactive
+   // components such as stars, posting user and comments attached to the post
+   Post struct {
+       ID               uint            `json:"id"`
+       PostedByUsername string          `json:"PostedByUsername,omitempty"`
+       OriginChannel    string          `json:"originChannel,omitempty"`
+       Title            string          `json:"title"`
+       Description      string          `json:"description"`
+       ContentsID       []uint          `json:"contentsID"`
+       Stars            map[string]uint `json:"stars"`
+       CommentsID       []int           `json:"commentsID"`
+       CreationTime     time.Time       `json:"creationTime"`
+   }
  */

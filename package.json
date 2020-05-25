@@ -9,9 +9,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --experimental-modules test/test.js"
+    "test": "jest"
   },
   "dependencies": {
     "axios": "^0.19.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.9.6",
+    "@babel/preset-env": "^7.9.0",
+    "babel-jest": "^26.0.1",
+    "chai": "^4.2.0",
+    "jest": "^26.0.1"
   }
 }
