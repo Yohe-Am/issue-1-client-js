@@ -9,7 +9,12 @@ import {
 
 import {
     addUser,
-    getUser
+    getUser,
+    getUsers,
+    searchUsers,
+    deleteUser,
+    addPostBookmark,
+    updateUser
 } from '../lib/user.js';
 
 import {
@@ -20,6 +25,9 @@ import {
     getFeedPosts,
     subscribeToChannel
 } from "../lib/feed.js";
+import {beforeAll, describe} from "@jest/globals";
+import {addPicture, deleteBookmark, getUserBookmarks} from "../lib/user";
+import fs from 'fs';
 
 const baseURL = "http://localhost:8080";
 
@@ -30,6 +38,32 @@ const testUser = {
     lastName: 'Poisonne',
     password: 'password'
 };
+
+let authToken;
+async function createAndAddTestUser() {
+    // create test user and get authToken
+    try {
+        await addUser(baseURL, testUser);
+    } catch (err) {
+        if (!(!!err.data && err.data.errorMessage === "username is occupied")) {
+            throw err;
+        }
+    }
+    authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+}
+
+async function deleteTestUser() {
+    await deleteUser(baseURL, testUser.username, authToken);
+}
+
+beforeAll(async () => {
+    await createAndAddTestUser()
+});
+
+
+/* afterAll(async () => {
+    deleteTestUser();
+}); */
 
 describe('authService', () => {
     'use strict';
@@ -58,7 +92,7 @@ describe('authService', () => {
     test('refreshAuthToken - bad token', async () => {
         try {
             var authToken = "badtokenheyoh,let'sgo";
-            var refreshedToken = await refreshAuthToken(baseURL, authToken);
+            await refreshAuthToken(baseURL, authToken);
         } catch (error) {
             expect(error).to.have.property('response')
                 .that.has.property('status')
@@ -66,53 +100,95 @@ describe('authService', () => {
         }
     });
 
-    test.only('logout - success', async () => {
+    test('logout - success', async () => {
         var authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
         var response = await logout(baseURL, authToken);
-        console.log(response);
+        expect(response).to.have.property("status").that.equals("success");
     });
-
-    /* 
-        test('getsAuthToken - non-existent username', () => {
-            expect(myBeverage.delicious).toBeTruthy();
-        });
-    
-        test('getsAuthToken - missing password', () => {
-            expect(myBeverage.delicious).toBeTruthy();
-        });
-    
-        test('getsAuthToken - missing username', () => {
-            expect(myBeverage.delicious).toBeTruthy();
-        }); */
 
 });
 
 describe('userService', () => {
     'use strict';
 
-    test('getsUser - success', async () => {
+    // skip addUser
+    test.skip('addUser - success', async () => {
+        let user = await getUser(baseURL, testUser);
+        expect(user).to.have.property('username', testUser.username);
+        expect(user).to.have.property('firstName', testUser.firstName);
+        expect(user).to.have.property('lastName', testUser.lastName);
+    });
+
+    test('getUser - success', async () => {
         let user = await getUser(baseURL, testUser.username);
         expect(user).to.have.property('username', testUser.username);
         expect(user).to.have.property('firstName', testUser.firstName);
         expect(user).to.have.property('lastName', testUser.lastName);
     });
-    /*  
-    {  // add user
-         await testAsyncFn(addUser, baseURL, testUser);
-     }
-     
-     { // getUser - nonauthorized
- 
-         await testAsyncFn(getUser, baseURL, testUser.username);
-     } 
-         
 
-     */
-    /* { // getUser - authorized
-        let token = await getAuthToken(baseURL, testUser.username, testUser.password);
-        console.log("got token");
-        await testFruitfulAsyncFn(getUser, baseURL, testUser.username, token);
-    } */
+    test('getUser - authorized - success', async () => {
+        let user = await getUser(baseURL, testUser.username, authToken);
+        expect(user).to.have.property('username', testUser.username);
+        expect(user).to.have.property('firstName', testUser.firstName);
+        expect(user).to.have.property('lastName', testUser.lastName);
+    });
+
+    test('getUser - unknown username', async () => {
+        try {
+            await getUser(baseURL, "fake baby");
+        } catch (error) {
+            expect(error).to.have.property("data")
+                .that.has.property("errorReason")
+                .that.equals("username");
+        }
+    });
+
+    // skip deleteUser
+    test.skip('deleteUser - success', async () => {
+        let response = await deleteUser(baseURL,testUser.username,  authToken);
+        expect(response).to.have.property("status").that.equals("success");
+    });
+
+    test('getUsers - success', async () => {
+        let users = await getUsers(baseURL);
+        expect(users).to.be.an('array');
+    });
+
+    test('searchUsers - success', async () => {
+        let users = await searchUsers(baseURL, "Poisonne");
+        expect(users).to.be.an('array');
+        expect(users[0]).to.have.property('username', testUser.username);
+    });
+
+    test('updateUser - success', async () => {
+        let newEmail = "wishes.on.a.wheel@beach.bum";
+        let user = await updateUser(baseURL, testUser.username, { email: newEmail}, authToken);
+        expect(user).to.have.property('email', newEmail);
+    });
+    
+   test('addPostBookmark - success', async () => {
+        let response = await addPostBookmark(baseURL, testUser.username, 3, authToken);
+        expect(response).to.have.property('status', 'success');
+    });
+    
+   test('getUserBookmarks - success', async () => {
+        let response = await getUserBookmarks(baseURL, testUser.username, authToken);
+        console.log(response);
+        // TODO: assertion for this test
+    });  
+   
+   test('deleteBookmark - success', async () => {
+        let response = await deleteBookmark(baseURL, testUser.username, 3, authToken);
+        console.log(response);
+       expect(response).to.have.property('status', 'success');
+    });   
+   
+   test.skip('addPicture - success', async () => {
+       // TODO
+       let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
+        let response = await addPicture(baseURL, testUser.username, fileStream, authToken);
+        console.log(response);
+    });
 
 });
 
@@ -130,43 +206,26 @@ describe('postService', () => {
 describe('feedService', () => {
     'use strict';
 
-    let authToken;
-    /*     beforeAll(async () => {
-            authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
-        });
-     */
     test('getFeedPosts - success', async () => {
         let posts = await getFeedPosts(
             baseURL,
             testUser.username,
             authToken,
             {
-                onlyIds: true,
+                onlyIds: false,
             }
         );
-        console.log(posts);
-    });
-
-    test('getFeedPosts - bad token', async () => {
-        let posts = await getFeedPosts(
-            baseURL,
-            testUser.username,
-            authToken = "badteokeoen",
-            {
-                onlyIds: true,
-            }
-        );
-        console.log(posts);
+        expect(posts).to.be.an("array");
     });
 
     test('subscribeToChannel - success', async () => {
-        let result = await subscribeToChannel(
+        let response = await subscribeToChannel(
             baseURL,
             testUser.username,
-            'chromagnum',
+            'faberge',
             authToken,
         );
-        console.log(result);
+        expect(response).to.have.property("status").that.equals("success");
     });
 });
 
