@@ -1,9 +1,25 @@
-import { getAuthToken } from '../lib/auth.js';
-import { addUser, getUser } from '../lib/user.js';
-import { getPost } from "../lib/post.js";
-import { getFeedPosts, subscribeToChannel } from "../lib/feed.js";
 // import 'chai/register-should';
 import 'chai/register-expect';
+
+import {
+    getAuthToken,
+    refreshAuthToken,
+    logout
+} from '../lib/auth.js';
+
+import {
+    addUser,
+    getUser
+} from '../lib/user.js';
+
+import {
+    getPost
+} from "../lib/post.js";
+
+import {
+    getFeedPosts,
+    subscribeToChannel
+} from "../lib/feed.js";
 
 const baseURL = "http://localhost:8080";
 
@@ -32,6 +48,30 @@ describe('authService', () => {
                 .that.equals('credentials');
         }
     });
+
+    test('refreshAuthToken - success', async () => {
+        var authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+        var refreshedToken = await refreshAuthToken(baseURL, authToken);
+        expect(refreshedToken).to.be.a('string');
+    });
+
+    test('refreshAuthToken - bad token', async () => {
+        try {
+            var authToken = "badtokenheyoh,let'sgo";
+            var refreshedToken = await refreshAuthToken(baseURL, authToken);
+        } catch (error) {
+            expect(error).to.have.property('response')
+                .that.has.property('status')
+                .that.equals(401);
+        }
+    });
+
+    test.only('logout - success', async () => {
+        var authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+        var response = await logout(baseURL, authToken);
+        console.log(response);
+    });
+
     /* 
         test('getsAuthToken - non-existent username', () => {
             expect(myBeverage.delicious).toBeTruthy();
@@ -91,15 +131,27 @@ describe('feedService', () => {
     'use strict';
 
     let authToken;
-    beforeAll(async () => {
-        authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
-    });
-
-    test.only('getFeedPosts - success', async () => {
+    /*     beforeAll(async () => {
+            authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+        });
+     */
+    test('getFeedPosts - success', async () => {
         let posts = await getFeedPosts(
             baseURL,
             testUser.username,
             authToken,
+            {
+                onlyIds: true,
+            }
+        );
+        console.log(posts);
+    });
+
+    test('getFeedPosts - bad token', async () => {
+        let posts = await getFeedPosts(
+            baseURL,
+            testUser.username,
+            authToken = "badteokeoen",
             {
                 onlyIds: true,
             }
