@@ -23,11 +23,12 @@ import {
 
 import {
     getFeedPosts,
-    subscribeToChannel
+    subscribeFeedToChannel
 } from "../lib/feed.js";
 import {beforeAll, describe} from "@jest/globals";
 import {addPicture, deleteBookmark, getUserBookmarks} from "../lib/user";
 import fs from 'fs';
+import {getFeed, getFeedSubscriptions, setDefaultFeedSorting, unsubscribeFeedFromChannel} from "../lib/feed";
 
 const baseURL = "http://localhost:8080";
 
@@ -206,6 +207,12 @@ describe('postService', () => {
 describe('feedService', () => {
     'use strict';
 
+    test('getFeed - success', async () => {
+        let feed = await getFeed(baseURL, testUser.username, authToken);
+        console.log(feed);
+        expect(feed).to.be.have.property('ownerUsername', testUser.username);
+    });
+
     test('getFeedPosts - success', async () => {
         let posts = await getFeedPosts(
             baseURL,
@@ -217,16 +224,47 @@ describe('feedService', () => {
         );
         expect(posts).to.be.an("array");
     });
+    
+    test('getFeedSubscriptions - success', async () => {
+        let subs = await getFeedSubscriptions(
+            baseURL,
+            testUser.username,
+            authToken,
+        );
+        console.log(subs);
+        //TODO: assertion for this test
+    });
 
-    test('subscribeToChannel - success', async () => {
-        let response = await subscribeToChannel(
+    test('subscribeFeedToChannel - success', async () => {
+        let response = await subscribeFeedToChannel(
             baseURL,
             testUser.username,
             'faberge',
             authToken,
         );
-        expect(response).to.have.property("status").that.equals("success");
+        expect(response).to.have.property("status", "success");
     });
+
+    test('unsubscribeFeedFromChannel - success', async () => {
+        let response = await unsubscribeFeedFromChannel(
+            baseURL,
+            testUser.username,
+            'faberge',
+            authToken,
+        );
+        expect(response).to.have.property("status", "success");
+    });
+
+    test('setDefaultFeedSorting - success', async () => {
+        let response = await setDefaultFeedSorting(
+            baseURL,
+            testUser.username,
+            'new',
+            authToken,
+        );
+        expect(response).to.have.property("status", "success");
+    });
+    
 });
 
 /* User struct {
