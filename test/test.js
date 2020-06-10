@@ -66,6 +66,7 @@ import {
     updatePost
 } from "../lib/post";
 import {addComment, addReply, deleteComment, getComment, getComments, getReplies, updateComment} from "../lib/comment";
+import {searchIssue1} from "../lib/search";
 
 const baseURL = "http://localhost:8080";
 
@@ -594,4 +595,13 @@ describe('feedService', () => {
         expect(response).to.have.property("status", "success");
     });
 
+});
+
+describe('searchService', () => {
+    'use strict';
+    
+    test('search - success', async () => {
+        let result = await searchIssue1(baseURL, 'love');
+        expect(result).to.have.property('posts').that.is.an('array');
+    });
 });
