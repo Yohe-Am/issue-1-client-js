@@ -14,8 +14,11 @@ import {
     searchUsers,
     deleteUser,
     addPostBookmark,
-    updateUser
-} from '../lib/user.js';
+    updateUser,
+    addPicture,
+    deleteBookmark,
+    getUserBookmarks
+} from "../lib/user";
 
 import {
     getPost
@@ -23,12 +26,34 @@ import {
 
 import {
     getFeedPosts,
-    subscribeFeedToChannel
+    subscribeFeedToChannel,
+    getFeed,
+    getFeedSubscriptions,
+    setDefaultFeedSorting,
+    unsubscribeFeedFromChannel
 } from "../lib/feed.js";
+
+
 import {beforeAll, describe} from "@jest/globals";
-import {addPicture, deleteBookmark, getUserBookmarks} from "../lib/user";
 import fs from 'fs';
-import {getFeed, getFeedSubscriptions, setDefaultFeedSorting, unsubscribeFeedFromChannel} from "../lib/feed";
+import {
+    addAdminToChannel,
+    addChannel,
+    changeChannelOwner,
+    deleteChannel, getAdmins,
+    getCatalog,
+    getChannel,
+    getChannelPost,
+    getChannelPosts,
+    getChannels,
+    getOfficialCatalog, getOwner,
+    getReleaseFromCatalog,
+    getReleaseFromOfficialCatalog,
+    getStickiedPosts,
+    removeAdminFromChannel,
+    searchChannels,
+    updateChannel
+} from "../lib/channel";
 
 const baseURL = "http://localhost:8080";
 
@@ -38,6 +63,13 @@ const testUser = {
     firstName: 'Jeff',
     lastName: 'Poisonne',
     password: 'password'
+};
+
+const testChannel = {
+    channelUsername: 'axesteel',
+    name: 'Anaerobic Love',
+    description: 'Still Waiting In The Car',
+    ownerUsername: 'Cobotbol',
 };
 
 let authToken;
@@ -193,7 +225,6 @@ describe('userService', () => {
 
 });
 
-
 describe('postService', () => {
     'use strict';
 
@@ -203,6 +234,180 @@ describe('postService', () => {
     });
 });
 
+describe('channelService', () => {
+    'use strict';
+
+    test.skip('addChannel - success', async () => {
+        let channel = await addChannel(baseURL, testChannel, authToken);
+        console.log(channel);
+        expect(channel).to.have.property('channelUsername', testChannel.channelUsername);
+    });
+    
+    test.skip('addChannel - other owner username', async () => {
+        const fakeChannel = {
+            channelUsername: 'icehead',
+            name: 'Baba Yaga',
+            description: 'Blood Flowing In The Streets',
+            ownerUsername: 'loveless',
+        };
+        let channel = await addChannel(baseURL, fakeChannel,authToken);
+        console.log(channel);
+        expect(channel).to.have.property('ownerUsername', testUser.username);
+    });
+
+    test('getChannel - success', async () => {
+        let channel = await getChannel(baseURL, testChannel.channelUsername);
+        expect(channel).to.have.property('channelUsername', testChannel.channelUsername);
+    });
+
+    test('getChannel - authorized - success', async () => {
+        let channel = await getChannel(baseURL,  testChannel.channelUsername, authToken);
+        expect(channel).to.have.property('channelUsername', testChannel.channelUsername);
+    });
+    
+    test('getChannels - success', async () => {
+        let channels = await getChannels(baseURL);
+        expect(channels).to.be.an('array');
+    });
+
+    test('searchChannels - success', async () => {
+        let channels = await searchChannels(baseURL,  testChannel.name);
+        expect(channels).to.be.an('array');
+        expect(channels[0]).to.have.property('channelUsername', testChannel.channelUsername);
+    });
+
+    test('updateChannel - success', async () => {
+        let newDescription = "Sun's Coming Down";
+        let channel = await updateChannel(
+            baseURL,
+            'icehead', 
+            { description: newDescription},
+            authToken);
+        expect(channel).to.have.property('description', newDescription);
+    });
+    
+    test('deleteChannel - success', async () => {
+        let response = await deleteChannel(baseURL,'icehead',  authToken);
+        expect(response).to.have.property("status", "success");
+    });
+    
+    test('addAdminToChannel - success', async () => {
+        let response = await addAdminToChannel(
+            baseURL,
+            'icehead',
+            'loveless',
+            authToken);
+        expect(response).to.have.property("status", "success");
+    });   
+    
+    test('removeAdminFromChannel - success', async () => {
+        let response = await removeAdminFromChannel(
+            baseURL,
+            testChannel.channelUsername,
+            'loveless',
+            authToken);
+        expect(response).to.have.property("status", "success");
+    });  
+    
+    test('changeChannelOwner - success', async () => {
+        let response = await changeChannelOwner(
+            baseURL,
+            'icehead',
+            'loveless',
+            authToken);
+        expect(response).to.have.property("status", "success");
+    });
+
+    test('getChannelPosts - success', async () => {
+        let posts = await getChannelPosts(
+            baseURL,
+            testChannel.channelUsername
+        );
+        console.log(posts);
+        expect(posts).to.be.an("array");
+    });
+    
+    test('getChannelPost - success', async () => {
+        let post = await getChannelPost(
+            baseURL,
+            'chromagnum',
+            6
+        );
+        console.log(post);
+        expect(post).to.be.have.property("postedByUsername", 'rembrandt');
+    });
+
+    test('getCatalog - success', async () => {
+        let releases = await getCatalog(
+            baseURL,
+            testChannel.channelUsername,
+            authToken
+        );
+        console.log(releases);
+        expect(releases).to.be.an("array");
+    });
+    
+    test('getOfficialCatalog - success', async () => {
+        let releases = await getOfficialCatalog(
+            baseURL,
+            'chromagnum',
+        );
+        console.log(releases);
+        expect(releases).to.be.an("array");
+    });
+
+    test('getReleaseFromOfficialCatalog - success', async () => {
+        let release = await getReleaseFromOfficialCatalog(
+            baseURL,
+            'chromagnum',
+            6
+        );
+        console.log(release);
+        expect(release).to.be.have.property("ownerChannel", 'chromagnum');
+    });
+    
+    test('getReleaseFromCatalog - success', async () => {
+        let release = await getReleaseFromCatalog(
+            baseURL, 
+            testChannel.channelUsername,
+            6
+        );
+        console.log(release);
+        expect(release).to.be.have.property("ownerChannel", testChannel.channelUsername);
+    });
+
+    test('getStickiedPosts - success', async () => {
+        let posts = await getStickiedPosts(
+            baseURL,
+            'chromagnum',
+        );
+        console.log(posts);
+        expect(posts).to.be.be.an("array");
+    });
+    
+    test('getAdmins - success', async () => {
+        let admins = await getAdmins(
+            baseURL, 
+            testChannel.channelUsername,
+            authToken
+        );
+        console.log(admins);
+        expect(admins).to.be.be.an("array");
+    });
+      
+    test('getOwner - success', async () => {
+        let owner = await getOwner(
+            baseURL, 
+            testChannel.channelUsername,
+            authToken
+        );
+        console.log(owner);
+        expect(owner).to.be.be.an("string");
+    });
+    
+    // TODO: test for adding and removing releases from catalog
+    // TODO: test for stickying posts
+});
 
 describe('feedService', () => {
     'use strict';
@@ -266,33 +471,3 @@ describe('feedService', () => {
     });
     
 });
-
-/* User struct {
-    Username     string    `json:"username"`
-    Email        string    `json:"email"`
-    FirstName    string    `json:"firstName"`
-    MiddleName   string    `json:"middleName"`
-    LastName     string    `json:"lastName"`
-    CreationTime time.Time `json:"creationTime"`
-    Bio          string    `json:"bio"`
-    //BookmarkedPosts map[time.Time]Post `json:"bookmarkedPosts"`
-    Password   string `json:"password,omitempty"`
-    PictureURL string `json:"pictureURL"`
-}
- */
-
-/*
-// Post is an aggregate entity of Releases along with socially interactive
-   // components such as stars, posting user and comments attached to the post
-   Post struct {
-       ID               uint            `json:"id"`
-       PostedByUsername string          `json:"PostedByUsername,omitempty"`
-       OriginChannel    string          `json:"originChannel,omitempty"`
-       Title            string          `json:"title"`
-       Description      string          `json:"description"`
-       ContentsID       []uint          `json:"contentsID"`
-       Stars            map[string]uint `json:"stars"`
-       CommentsID       []int           `json:"commentsID"`
-       CreationTime     time.Time       `json:"creationTime"`
-   }
- */
