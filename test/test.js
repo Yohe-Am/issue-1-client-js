@@ -33,20 +33,19 @@ import {
     unsubscribeFeedFromChannel
 } from "../lib/feed.js";
 
-
-import {beforeAll, describe} from "@jest/globals";
-import fs from 'fs';
 import {
     addAdminToChannel,
     addChannel,
     changeChannelOwner,
-    deleteChannel, getAdmins,
+    deleteChannel,
+    getAdmins,
     getCatalog,
     getChannel,
     getChannelPost,
     getChannelPosts,
     getChannels,
-    getOfficialCatalog, getOwner,
+    getOfficialCatalog,
+    getOwner,
     getReleaseFromCatalog,
     getReleaseFromOfficialCatalog,
     getStickiedPosts,
@@ -54,6 +53,19 @@ import {
     searchChannels,
     updateChannel
 } from "../lib/channel";
+
+import {beforeAll, describe} from "@jest/globals";
+import fs from 'fs';
+import {
+    addPost,
+    deletePost,
+    getPostComments,
+    getPostReleases,
+    getPosts, getPostStarOfUser,
+    getPostStars,
+    searchPosts, starPost,
+    updatePost
+} from "../lib/post";
 
 const baseURL = "http://localhost:8080";
 
@@ -72,7 +84,15 @@ const testChannel = {
     ownerUsername: 'Cobotbol',
 };
 
+const testPost = {
+    postedByUsername: testUser.username,
+    originChannel: testChannel.channelUsername,
+    title: 'Have mercy, love.',
+    description: 'Mercy, darling.',
+};
+
 let authToken;
+
 async function createAndAddTestUser() {
     // create test user and get authToken
     try {
@@ -178,7 +198,7 @@ describe('userService', () => {
 
     // skip deleteUser
     test.skip('deleteUser - success', async () => {
-        let response = await deleteUser(baseURL,testUser.username,  authToken);
+        let response = await deleteUser(baseURL, testUser.username, authToken);
         expect(response).to.have.property("status").that.equals("success");
     });
 
@@ -195,30 +215,30 @@ describe('userService', () => {
 
     test('updateUser - success', async () => {
         let newEmail = "wishes.on.a.wheel@beach.bum";
-        let user = await updateUser(baseURL, testUser.username, { email: newEmail}, authToken);
+        let user = await updateUser(baseURL, testUser.username, {email: newEmail}, authToken);
         expect(user).to.have.property('email', newEmail);
     });
-    
-   test('addPostBookmark - success', async () => {
+
+    test('addPostBookmark - success', async () => {
         let response = await addPostBookmark(baseURL, testUser.username, 3, authToken);
         expect(response).to.have.property('status', 'success');
     });
-    
-   test('getUserBookmarks - success', async () => {
+
+    test('getUserBookmarks - success', async () => {
         let response = await getUserBookmarks(baseURL, testUser.username, authToken);
         console.log(response);
         // TODO: assertion for this test
-    });  
-   
-   test('deleteBookmark - success', async () => {
+    });
+
+    test('deleteBookmark - success', async () => {
         let response = await deleteBookmark(baseURL, testUser.username, 3, authToken);
         console.log(response);
-       expect(response).to.have.property('status', 'success');
-    });   
-   
-   test.skip('addPicture - success', async () => {
-       // TODO
-       let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
+        expect(response).to.have.property('status', 'success');
+    });
+
+    test.skip('addPicture - success', async () => {
+        // TODO
+        let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
         let response = await addPicture(baseURL, testUser.username, fileStream, authToken);
         console.log(response);
     });
@@ -229,9 +249,69 @@ describe('postService', () => {
     'use strict';
 
     test('getPost - success', async () => {
-        let post = await getPost(baseURL, 5);
-        console.log(post);
+        let post = await getPost(baseURL, 7);
+        expect(post).to.have.property('title', testPost.title);
     });
+
+    test('getPosts - success', async () => {
+        let posts = await getPosts(baseURL);
+        expect(posts).to.be.an('array');
+    });
+
+    test('searchPosts - success', async () => {
+        let posts = await searchPosts(baseURL, testPost.title);
+        expect(posts).to.be.an('array');
+        expect(posts[0]).to.have.property('description', testPost.description);
+    });
+
+    test.skip('addPost - success', async () => {
+        let post = await addPost(baseURL, testPost, authToken);
+        console.log(post);
+        expect(post).to.have.property('title', testPost.title);
+    });
+
+    test('deletePost - success', async () => {
+        let response = await deletePost(baseURL, 8, authToken);
+        expect(response).to.have.property("status", "success");
+    });
+
+    test('updatePost - success', async () => {
+        let newDescription = "Feed me with gasoline";
+        let post = await updatePost(
+            baseURL,
+            7,
+            {
+                description: newDescription
+            },
+            authToken);
+        expect(post).to.have.property("description", `<p>${newDescription}</p>\n`);
+    });
+
+    test('getPostComments - success', async () => {
+        let comments = await getPostComments(baseURL, 7);
+        expect(comments).to.be.an('array');
+    });
+
+    test('getPostReleases - success', async () => {
+        let releases = await getPostReleases(baseURL, 7);
+        expect(releases).to.be.an('array');
+    });
+
+    test('getPostStars - success', async () => {
+        let stars = await getPostStars(baseURL, 7);
+        expect(stars).to.be.an('array');
+    });
+
+    test('starPost - success', async () => {
+        let stars = await starPost(baseURL, 7,3, testUser.username,authToken);
+        expect(stars).to.have.property("stars", 3);
+    });
+    
+    test('getPostStarOfUser - success', async () => {
+        let stars = await getPostStarOfUser(baseURL, 7, testUser.username);
+        expect(stars).to.have.property("username", testUser.username);;
+    });
+
 });
 
 describe('channelService', () => {
@@ -239,10 +319,9 @@ describe('channelService', () => {
 
     test.skip('addChannel - success', async () => {
         let channel = await addChannel(baseURL, testChannel, authToken);
-        console.log(channel);
         expect(channel).to.have.property('channelUsername', testChannel.channelUsername);
     });
-    
+
     test.skip('addChannel - other owner username', async () => {
         const fakeChannel = {
             channelUsername: 'icehead',
@@ -250,7 +329,7 @@ describe('channelService', () => {
             description: 'Blood Flowing In The Streets',
             ownerUsername: 'loveless',
         };
-        let channel = await addChannel(baseURL, fakeChannel,authToken);
+        let channel = await addChannel(baseURL, fakeChannel, authToken);
         console.log(channel);
         expect(channel).to.have.property('ownerUsername', testUser.username);
     });
@@ -261,17 +340,17 @@ describe('channelService', () => {
     });
 
     test('getChannel - authorized - success', async () => {
-        let channel = await getChannel(baseURL,  testChannel.channelUsername, authToken);
+        let channel = await getChannel(baseURL, testChannel.channelUsername, authToken);
         expect(channel).to.have.property('channelUsername', testChannel.channelUsername);
     });
-    
+
     test('getChannels - success', async () => {
         let channels = await getChannels(baseURL);
         expect(channels).to.be.an('array');
     });
 
     test('searchChannels - success', async () => {
-        let channels = await searchChannels(baseURL,  testChannel.name);
+        let channels = await searchChannels(baseURL, testChannel.name);
         expect(channels).to.be.an('array');
         expect(channels[0]).to.have.property('channelUsername', testChannel.channelUsername);
     });
@@ -280,17 +359,17 @@ describe('channelService', () => {
         let newDescription = "Sun's Coming Down";
         let channel = await updateChannel(
             baseURL,
-            'icehead', 
-            { description: newDescription},
+            'icehead',
+            {description: newDescription},
             authToken);
         expect(channel).to.have.property('description', newDescription);
     });
-    
+
     test('deleteChannel - success', async () => {
-        let response = await deleteChannel(baseURL,'icehead',  authToken);
+        let response = await deleteChannel(baseURL, 'icehead', authToken);
         expect(response).to.have.property("status", "success");
     });
-    
+
     test('addAdminToChannel - success', async () => {
         let response = await addAdminToChannel(
             baseURL,
@@ -298,8 +377,8 @@ describe('channelService', () => {
             'loveless',
             authToken);
         expect(response).to.have.property("status", "success");
-    });   
-    
+    });
+
     test('removeAdminFromChannel - success', async () => {
         let response = await removeAdminFromChannel(
             baseURL,
@@ -307,8 +386,8 @@ describe('channelService', () => {
             'loveless',
             authToken);
         expect(response).to.have.property("status", "success");
-    });  
-    
+    });
+
     test('changeChannelOwner - success', async () => {
         let response = await changeChannelOwner(
             baseURL,
@@ -323,17 +402,15 @@ describe('channelService', () => {
             baseURL,
             testChannel.channelUsername
         );
-        console.log(posts);
         expect(posts).to.be.an("array");
     });
-    
+
     test('getChannelPost - success', async () => {
         let post = await getChannelPost(
             baseURL,
             'chromagnum',
             6
         );
-        console.log(post);
         expect(post).to.be.have.property("postedByUsername", 'rembrandt');
     });
 
@@ -343,16 +420,14 @@ describe('channelService', () => {
             testChannel.channelUsername,
             authToken
         );
-        console.log(releases);
         expect(releases).to.be.an("array");
     });
-    
+
     test('getOfficialCatalog - success', async () => {
         let releases = await getOfficialCatalog(
             baseURL,
             'chromagnum',
         );
-        console.log(releases);
         expect(releases).to.be.an("array");
     });
 
@@ -362,17 +437,15 @@ describe('channelService', () => {
             'chromagnum',
             6
         );
-        console.log(release);
         expect(release).to.be.have.property("ownerChannel", 'chromagnum');
     });
-    
+
     test('getReleaseFromCatalog - success', async () => {
         let release = await getReleaseFromCatalog(
-            baseURL, 
+            baseURL,
             testChannel.channelUsername,
             6
         );
-        console.log(release);
         expect(release).to.be.have.property("ownerChannel", testChannel.channelUsername);
     });
 
@@ -381,30 +454,27 @@ describe('channelService', () => {
             baseURL,
             'chromagnum',
         );
-        console.log(posts);
         expect(posts).to.be.be.an("array");
     });
-    
+
     test('getAdmins - success', async () => {
         let admins = await getAdmins(
-            baseURL, 
+            baseURL,
             testChannel.channelUsername,
             authToken
         );
-        console.log(admins);
         expect(admins).to.be.be.an("array");
     });
-      
+
     test('getOwner - success', async () => {
         let owner = await getOwner(
-            baseURL, 
+            baseURL,
             testChannel.channelUsername,
             authToken
         );
-        console.log(owner);
         expect(owner).to.be.be.an("string");
     });
-    
+
     // TODO: test for adding and removing releases from catalog
     // TODO: test for stickying posts
 });
@@ -414,7 +484,6 @@ describe('feedService', () => {
 
     test('getFeed - success', async () => {
         let feed = await getFeed(baseURL, testUser.username, authToken);
-        console.log(feed);
         expect(feed).to.be.have.property('ownerUsername', testUser.username);
     });
 
@@ -429,7 +498,7 @@ describe('feedService', () => {
         );
         expect(posts).to.be.an("array");
     });
-    
+
     test('getFeedSubscriptions - success', async () => {
         let subs = await getFeedSubscriptions(
             baseURL,
@@ -469,5 +538,5 @@ describe('feedService', () => {
         );
         expect(response).to.have.property("status", "success");
     });
-    
+
 });
