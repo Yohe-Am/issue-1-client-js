@@ -59,13 +59,13 @@ import fs from 'fs';
 import {
     addPost,
     deletePost,
-    getPostComments,
     getPostReleases,
     getPosts, getPostStarOfUser,
     getPostStars,
     searchPosts, starPost,
     updatePost
 } from "../lib/post";
+import {addComment, addReply, deleteComment, getComment, getComments, getReplies, updateComment} from "../lib/comment";
 
 const baseURL = "http://localhost:8080";
 
@@ -82,13 +82,6 @@ const testChannel = {
     name: 'Anaerobic Love',
     description: 'Still Waiting In The Car',
     ownerUsername: 'Cobotbol',
-};
-
-const testPost = {
-    postedByUsername: testUser.username,
-    originChannel: testChannel.channelUsername,
-    title: 'Have mercy, love.',
-    description: 'Mercy, darling.',
 };
 
 let authToken;
@@ -248,6 +241,13 @@ describe('userService', () => {
 describe('postService', () => {
     'use strict';
 
+    const testPost = {
+        postedByUsername: testUser.username,
+        originChannel: testChannel.channelUsername,
+        title: 'Have mercy, love.',
+        description: 'Mercy, darling.',
+    };
+
     test('getPost - success', async () => {
         let post = await getPost(baseURL, 7);
         expect(post).to.have.property('title', testPost.title);
@@ -266,7 +266,6 @@ describe('postService', () => {
 
     test.skip('addPost - success', async () => {
         let post = await addPost(baseURL, testPost, authToken);
-        console.log(post);
         expect(post).to.have.property('title', testPost.title);
     });
 
@@ -287,11 +286,6 @@ describe('postService', () => {
         expect(post).to.have.property("description", `<p>${newDescription}</p>\n`);
     });
 
-    test('getPostComments - success', async () => {
-        let comments = await getPostComments(baseURL, 7);
-        expect(comments).to.be.an('array');
-    });
-
     test('getPostReleases - success', async () => {
         let releases = await getPostReleases(baseURL, 7);
         expect(releases).to.be.an('array');
@@ -303,15 +297,76 @@ describe('postService', () => {
     });
 
     test('starPost - success', async () => {
-        let stars = await starPost(baseURL, 7,3, testUser.username,authToken);
+        let stars = await starPost(baseURL, 7, 3, testUser.username, authToken);
         expect(stars).to.have.property("stars", 3);
     });
-    
+
     test('getPostStarOfUser - success', async () => {
         let stars = await getPostStarOfUser(baseURL, 7, testUser.username);
-        expect(stars).to.have.property("username", testUser.username);;
+        expect(stars).to.have.property("username", testUser.username);
     });
 
+});
+
+describe('commentService', () => {
+    'use strict';
+
+    const testComment = {
+        // id = 18
+        commenter: testUser.username,
+        originPost: 7,
+        content: 'I found you lying where I drowned you.',
+    };
+
+    test.skip('addComment - success', async () => {
+        let comment = await addComment(baseURL, testComment, 7, authToken);
+        expect(comment).to.have.property('commenter', testComment.commenter);
+    });
+
+    test.skip('addReply - success', async () => {
+        const testReply = {
+            replyTo: 18,
+            commenter: testUser.username,
+            originPost: 7,
+            content: 'A dirty black room.',
+        };
+        let reply = await addReply(baseURL, testReply, 7, 18, authToken);
+        console.log(reply);
+        expect(reply).to.have.property('commenter', testReply.commenter);
+    });
+
+    test('getComment - success', async () => {
+        let comment = await getComment(baseURL, 18, 7);
+        expect(comment).to.have.property('commenter', testComment.commenter);
+    });
+
+    test('getComments - success', async () => {
+        let comments = await getComments(baseURL, 7);
+        console.log(comments);
+        expect(comments).to.be.an('array');
+    });
+
+    test('getReplies - success', async () => {
+        let replies = await getReplies(baseURL, 18, 7);
+        console.log(replies);
+        expect(replies).to.be.an('array');
+    });
+
+    test('updateComment - success', async () => {
+        let newContent = "trippy electronic love songs";
+        let channel = await updateComment(
+            baseURL,
+            18,
+            7,
+            {content: newContent},
+            authToken);
+        expect(channel).to.have.property('content', `<p>${newContent}</p>`);
+    });
+
+    test('deleteComment - success', async () => {
+        let response = await deleteComment(baseURL, 19, 7, authToken);
+        expect(response).to.have.property("status", "success");
+    });
 });
 
 describe('channelService', () => {
