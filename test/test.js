@@ -35,7 +35,7 @@ import {
 
 import {
     addAdminToChannel,
-    addChannel,
+    addChannel, addReleaseToChannelOfficialCatalog,
     changeChannelOwner,
     deleteChannel,
     getAdmins,
@@ -49,8 +49,8 @@ import {
     getReleaseFromCatalog,
     getReleaseFromOfficialCatalog,
     getStickiedPosts,
-    removeAdminFromChannel,
-    searchChannels,
+    removeAdminFromChannel, removeReleaseFromChannelOfficialCatalog, removeStickiedPost,
+    searchChannels, stickyPost,
     updateChannel
 } from "../lib/channel";
 
@@ -65,8 +65,17 @@ import {
     searchPosts, starPost,
     updatePost
 } from "../lib/post";
-import {addComment, addReply, deleteComment, getComment, getComments, getReplies, updateComment} from "../lib/comment";
+import {
+    addComment,
+    addReply,
+    deleteComment,
+    getComment,
+    getComments,
+    getReplies,
+    updateComment
+} from "../lib/comment";
 import {searchIssue1} from "../lib/search";
+import {addTextRelease, deleteRelease, getRelease, getReleases, searchReleases, updateRelease} from "../lib/release";
 
 const baseURL = "http://localhost:8080";
 
@@ -96,7 +105,11 @@ async function createAndAddTestUser() {
             throw err;
         }
     }
-    authToken = await getAuthToken(baseURL, testUser.username, testUser.password);
+    authToken = await getAuthToken(
+        baseURL,
+        testUser.username,
+        testUser.password
+    );
 }
 
 async function deleteTestUser() {
@@ -231,7 +244,7 @@ describe('userService', () => {
     });
 
     test.skip('addPicture - success', async () => {
-        // TODO
+        // TODO implement
         let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
         let response = await addPicture(baseURL, testUser.username, fileStream, authToken);
         console.log(response);
@@ -464,7 +477,7 @@ describe('channelService', () => {
     test('getChannelPost - success', async () => {
         let post = await getChannelPost(
             baseURL,
-            'chromagnum',
+            testChannel.channelUsername,
             6
         );
         expect(post).to.be.have.property("postedByUsername", 'rembrandt');
@@ -482,7 +495,7 @@ describe('channelService', () => {
     test('getOfficialCatalog - success', async () => {
         let releases = await getOfficialCatalog(
             baseURL,
-            'chromagnum',
+            testChannel.channelUsername,
         );
         expect(releases).to.be.an("array");
     });
@@ -490,17 +503,18 @@ describe('channelService', () => {
     test('getReleaseFromOfficialCatalog - success', async () => {
         let release = await getReleaseFromOfficialCatalog(
             baseURL,
-            'chromagnum',
-            6
+            testChannel.channelUsername,
+            74
         );
-        expect(release).to.be.have.property("ownerChannel", 'chromagnum');
+        expect(release).to.be.have.property("ownerChannel", testChannel.channelUsername);
     });
 
     test('getReleaseFromCatalog - success', async () => {
         let release = await getReleaseFromCatalog(
             baseURL,
             testChannel.channelUsername,
-            6
+            74,
+            authToken
         );
         expect(release).to.be.have.property("ownerChannel", testChannel.channelUsername);
     });
@@ -508,7 +522,7 @@ describe('channelService', () => {
     test('getStickiedPosts - success', async () => {
         let posts = await getStickiedPosts(
             baseURL,
-            'chromagnum',
+            testChannel.channelUsername,
         );
         expect(posts).to.be.be.an("array");
     });
@@ -531,8 +545,48 @@ describe('channelService', () => {
         expect(owner).to.be.be.an("string");
     });
 
-    // TODO: test for adding and removing releases from catalog
-    // TODO: test for stickying posts
+    test('addReleaseToChannelOfficialCatalog - success', async () => {
+        let response = await addReleaseToChannelOfficialCatalog(
+            baseURL,
+            testChannel.channelUsername,
+            74,
+            9,
+            authToken
+        );
+        expect(response).to.have.property("status", "success");
+    });
+
+    test('removeReleaseFromChannelOfficialCatalog - success', async () => {
+        let response = await removeReleaseFromChannelOfficialCatalog(
+            baseURL,
+            testChannel.channelUsername,
+            74,
+            authToken
+        );
+        // TODO: implement this on the server
+        // expect(response).to.have.property("status", "success");
+    });
+
+    test('stickyPost - success', async () => {
+        let response = await stickyPost(
+            baseURL,
+            testChannel.channelUsername,
+            9,
+            authToken
+        );
+        expect(response).to.have.property("status", "success");
+    });
+
+    test('removeStickiedPost - success', async () => {
+        let response = await removeStickiedPost(
+            baseURL,
+            testChannel.channelUsername,
+            9,
+            authToken
+        );
+        expect(response).to.have.property("status", "success");
+    });
+
 });
 
 describe('feedService', () => {
@@ -599,9 +653,73 @@ describe('feedService', () => {
 
 describe('searchService', () => {
     'use strict';
-    
+
     test('search - success', async () => {
         let result = await searchIssue1(baseURL, 'love');
         expect(result).to.have.property('posts').that.is.an('array');
     });
+});
+
+describe('releaseService', () => {
+    'use strict';
+
+    const testReleaseText = {
+        ownerChannel: testChannel.channelUsername,
+        type: 'text',
+        content: 'And Debbi, for the first time in her sad little life, felt the hunger let go...',
+        metadata: {
+            title: 'Quandary Beings And Some Stories Of Debauchery',
+            releaseDate: new Date(),
+            genreDefining: 'Test Fiction',
+            description: '',
+        }
+    };
+
+    test('getRelease - success', async () => {
+        let release = await getRelease(baseURL, 74);
+        expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
+    });
+
+    test('getRelease - authorized - success', async () => {
+        let release = await getRelease(baseURL, 74, authToken);
+        expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
+    });
+
+    test('addTextRelease - success', async () => {
+        let release = await addTextRelease(baseURL, testReleaseText, authToken);
+        expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
+    });
+
+    test('getReleases - success', async () => {
+        let releases = await getReleases(baseURL);
+        expect(releases).to.be.an('array');
+    });
+
+    test('searchReleases - success', async () => {
+        let releases = await searchReleases(baseURL, 'project');
+        expect(releases).to.be.an('array');
+    });
+
+    test('updateRelease - success', async () => {
+        const otherMeta = {
+            authors: [testUser.username]
+        };
+        let release = await updateRelease(
+            baseURL,
+            74,
+            {
+                metadata: {
+                    other: otherMeta
+                }
+            },
+            authToken);
+        expect(release).to.have.property('metadata').to.have.property('other', otherMeta);
+    });
+    
+    test('deleteRelease - success', async () => {
+        let response = await deleteRelease(baseURL, 75, authToken);
+        expect(response).to.have.property("status", "success");
+    });
+
+//TODO: add image release
 });
