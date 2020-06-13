@@ -17,7 +17,7 @@ import {
     updateUser,
     addPicture,
     deleteBookmark,
-    getUserBookmarks
+    getUserBookmarks, removePicture
 } from "../lib/user";
 
 import {
@@ -49,7 +49,9 @@ import {
     getReleaseFromCatalog,
     getReleaseFromOfficialCatalog,
     getStickiedPosts,
-    removeAdminFromChannel, removeReleaseFromChannelOfficialCatalog, removeStickiedPost,
+    removeAdminFromChannel,
+    removeReleaseFromChannelOfficialCatalog,
+    removeStickiedPost,
     searchChannels, stickyPost,
     updateChannel
 } from "../lib/channel";
@@ -75,7 +77,12 @@ import {
     updateComment
 } from "../lib/comment";
 import {searchIssue1} from "../lib/search";
-import {addTextRelease, deleteRelease, getRelease, getReleases, searchReleases, updateRelease} from "../lib/release";
+import {
+    addTextRelease,
+    deleteRelease, getRelease,
+    getReleases, searchReleases,
+    updateRelease
+} from "../lib/release";
 
 const baseURL = "http://localhost:8080";
 
@@ -239,15 +246,18 @@ describe('userService', () => {
 
     test('deleteBookmark - success', async () => {
         let response = await deleteBookmark(baseURL, testUser.username, 3, authToken);
-        console.log(response);
         expect(response).to.have.property('status', 'success');
     });
 
-    test.skip('addPicture - success', async () => {
-        // TODO implement
+    test('addPicture - success', async () => {
         let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
-        let response = await addPicture(baseURL, testUser.username, fileStream, authToken);
+        let response = await addPicture(baseURL, testUser.username, authToken, fileStream, 'beachhouse.jpeg');
         console.log(response);
+    });
+    
+    test('removePicture - success', async () => {
+        let response = await removePicture(baseURL, testUser.username, authToken);
+        expect(response).to.have.property('status', 'success');
     });
 
 });
@@ -715,7 +725,7 @@ describe('releaseService', () => {
             authToken);
         expect(release).to.have.property('metadata').to.have.property('other', otherMeta);
     });
-    
+
     test('deleteRelease - success', async () => {
         let response = await deleteRelease(baseURL, 75, authToken);
         expect(response).to.have.property("status", "success");
