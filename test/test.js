@@ -15,9 +15,9 @@ import {
     deleteUser,
     addPostBookmark,
     updateUser,
-    addPicture,
+    addProfilePicture,
     deleteBookmark,
-    getUserBookmarks
+    getUserBookmarks, removeProfilePicture
 } from "../lib/user";
 
 import {
@@ -35,7 +35,7 @@ import {
 
 import {
     addAdminToChannel,
-    addChannel, addReleaseToChannelOfficialCatalog,
+    addChannel, addDisplayPicture, addReleaseToChannelOfficialCatalog,
     changeChannelOwner,
     deleteChannel,
     getAdmins,
@@ -49,7 +49,9 @@ import {
     getReleaseFromCatalog,
     getReleaseFromOfficialCatalog,
     getStickiedPosts,
-    removeAdminFromChannel, removeReleaseFromChannelOfficialCatalog, removeStickiedPost,
+    removeAdminFromChannel, removeDisplayPicture,
+    removeReleaseFromChannelOfficialCatalog,
+    removeStickiedPost,
     searchChannels, stickyPost,
     updateChannel
 } from "../lib/channel";
@@ -75,7 +77,13 @@ import {
     updateComment
 } from "../lib/comment";
 import {searchIssue1} from "../lib/search";
-import {addTextRelease, deleteRelease, getRelease, getReleases, searchReleases, updateRelease} from "../lib/release";
+import {
+    addImageRelease,
+    addTextRelease,
+    deleteRelease, getRelease,
+    getReleases, searchReleases, updateImageRelease,
+    updateRelease
+} from "../lib/release";
 
 const baseURL = "http://localhost:8080";
 
@@ -239,15 +247,18 @@ describe('userService', () => {
 
     test('deleteBookmark - success', async () => {
         let response = await deleteBookmark(baseURL, testUser.username, 3, authToken);
-        console.log(response);
         expect(response).to.have.property('status', 'success');
     });
 
-    test.skip('addPicture - success', async () => {
-        // TODO implement
+    test('addProfilePicture - success', async () => {
         let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
-        let response = await addPicture(baseURL, testUser.username, fileStream, authToken);
+        let response = await addProfilePicture(baseURL, testUser.username, authToken, fileStream, 'beachhouse.jpeg');
         console.log(response);
+    });
+
+    test('removeProfilePicture - success', async () => {
+        let response = await removeProfilePicture(baseURL, testUser.username, authToken);
+        expect(response).to.have.property('status', 'success');
     });
 
 });
@@ -587,6 +598,23 @@ describe('channelService', () => {
         expect(response).to.have.property("status", "success");
     });
 
+    test('addDisplayPicture - success', async () => {
+        let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
+        let response = await addDisplayPicture(
+            baseURL,
+            testChannel.channelUsername,
+            authToken,
+            fileStream,
+            'beachhouse.jpeg');
+        console.log(response);
+        // TODO: assertions for this test
+    });
+
+    test('removeDisplayPicture - success', async () => {
+        let response = await removeDisplayPicture(baseURL, testUser.username, authToken);
+        expect(response).to.have.property('status', 'success');
+    });
+
 });
 
 describe('feedService', () => {
@@ -675,18 +703,34 @@ describe('releaseService', () => {
         }
     };
 
+    const testReleaseImage = {
+        ownerChannel: testChannel.channelUsername,
+        type: 'image',
+        metadata: {
+            title: 'A Trip and A Tear In Three Zebras',
+            releaseDate: new Date(),
+            genreDefining: 'Test Image Fiction',
+        }
+    };
+
     test('getRelease - success', async () => {
         let release = await getRelease(baseURL, 74);
         expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
     });
 
     test('getRelease - authorized - success', async () => {
-        let release = await getRelease(baseURL, 74, authToken);
+        let release = await getRelease(baseURL, 75, authToken);
         expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
     });
 
     test('addTextRelease - success', async () => {
         let release = await addTextRelease(baseURL, testReleaseText, authToken);
+        expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
+    });
+
+    test('addImageRelease - success', async () => {
+        let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
+        let release = await addImageRelease(baseURL, testReleaseImage, authToken, fileStream, 'beachhouse.jpeg');
         expect(release).to.have.property('ownerChannel', testReleaseText.ownerChannel);
     });
 
@@ -714,8 +758,28 @@ describe('releaseService', () => {
             },
             authToken);
         expect(release).to.have.property('metadata').to.have.property('other', otherMeta);
+        // todo fix assertion
     });
-    
+
+    test('updateImageRelease - success', async () => {
+        const otherMeta = {
+            authors: [testUser.username]
+        };
+        let fileStream = fs.createReadStream("test\\beachhouse.jpeg");
+        let release = await updateImageRelease(
+            baseURL,
+            75,
+            {
+                metadata: {
+                    other: otherMeta
+                }
+            },
+            authToken,
+            fileStream,
+            'beachhouse.jpeg');
+        expect(release).to.have.property('metadata').to.have.property('other', otherMeta);
+    });
+
     test('deleteRelease - success', async () => {
         let response = await deleteRelease(baseURL, 75, authToken);
         expect(response).to.have.property("status", "success");
