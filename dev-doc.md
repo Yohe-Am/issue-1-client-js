@@ -9,10 +9,10 @@
 - [x] auth service client
 - [x] user service client
 - [x] post service client
-- [ ] channel service client
+- [x] channel service client
 - [x] comment service client
 - [x] feed service client
-- [ ] release service client
+- [x] release service client
 - [x] search service client
 
 ## dev-log
